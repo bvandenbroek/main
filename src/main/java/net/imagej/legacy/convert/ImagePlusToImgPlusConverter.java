@@ -27,58 +27,62 @@
  * #L%
  */
 
-package net.imagej.legacy.translate;
+package net.imagej.legacy.convert;
+
+import org.scijava.Priority;
+import org.scijava.convert.Converter;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
 
 import ij.ImagePlus;
-
 import net.imagej.Dataset;
+import net.imagej.ImgPlus;
 import net.imagej.display.ImageDisplay;
-import net.imagej.legacy.LegacyService;
-
-import org.scijava.AbstractContextual;
-import org.scijava.Context;
+import net.imagej.display.ImageDisplayService;
 
 /**
- * Combines {@link DisplayCreator} and {@link ImagePlusCreator}.
+ * {@link Converter} implementation for converting {@link ImagePlus} to a
+ * {@link ImgPlus}.
+ * <p>
+ * NB: should be LOWER priority than any default {@code Converter}s to avoid
+ * unintentionally grabbing undesired conversions (e.g. involving nulls).
+ * </p>
  *
- * @author Barry DeZonia
+ * @author Mark Hiner
  * @author Curtis Rueden
  */
-public class ImageTranslator extends AbstractContextual
+@Plugin(type = Converter.class, priority = Priority.LOW)
+public class ImagePlusToImgPlusConverter extends
+	AbstractImagePlusLegacyConverter<ImgPlus>
 {
 
-	private final DisplayCreator displayCreator;
-	private final ImagePlusCreator imagePlusCreator;
+	@Parameter(required = false)
+	private ImageDisplayService imageDisplayService;
 
-	public ImageTranslator(final LegacyService legacyService) {
-		final Context context = legacyService.getContext();
-		displayCreator = new DisplayCreator(context);
-		imagePlusCreator = new ImagePlusCreator(context);
+	// -- Converter methods --
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T> T convert(final Object src, final Class<T> dest) {
+		if (!legacyEnabled() || imageDisplayService == null) {
+			throw new UnsupportedOperationException();
+		}
+
+		// Convert using the LegacyImageMap
+		final ImageDisplay display =
+			legacyService.getImageMap().registerLegacyImage((ImagePlus) src);
+
+		final Dataset dataset = imageDisplayService.getActiveDataset(display);
+		return (T) dataset.getImgPlus();
 	}
 
-	/**
-	 * Creates a {@link ImageDisplay} from an {@link ImagePlus}. Shares planes of
-	 * data when possible.
-	 */
-	public ImageDisplay createDisplay(final ImagePlus imp) {
-		return displayCreator.createDisplay(imp);
+	@Override
+	public Class<ImgPlus> getOutputType() {
+		return ImgPlus.class;
 	}
 
-	/**
-	 * Creates an {@link ImagePlus} from a {@link ImageDisplay}. Shares planes of
-	 * data when possible.
-	 */
-	public ImagePlus createLegacyImage(final ImageDisplay display) {
-		return imagePlusCreator.createLegacyImage(display);
-	}
-
-	public ImagePlus createLegacyImage(final Dataset ds) {
-		return imagePlusCreator.createLegacyImage(ds);
-	}
-
-	public ImagePlus createLegacyImage(final Dataset ds,
-		final ImageDisplay display)
-	{
-		return imagePlusCreator.createLegacyImage(ds, display);
+	@Override
+	public Class<ImagePlus> getInputType() {
+		return ImagePlus.class;
 	}
 }

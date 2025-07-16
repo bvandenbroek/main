@@ -2,7 +2,7 @@
  * #%L
  * ImageJ2 software for multidimensional image processing and analysis.
  * %%
- * Copyright (C) 2009 - 2023 ImageJ2 developers.
+ * Copyright (C) 2009 - 2025 ImageJ2 developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -93,6 +93,9 @@ public class SearchBarHacker {
 				resultLimit);
 		}
 
+		// Scale search result icons to match original ImageJ settings.
+		int iconSize = (int) (16 * ij1Helper.guiScale());
+
 		final Component[] ijc = ((Container) imagej).getComponents();
 		if (ijc.length < 2) return null;
 		final Component ijc1 = ijc[1];
@@ -168,6 +171,7 @@ public class SearchBarHacker {
 		}
 		searchBar.setMouseoverEnabled(mouseoverEnabled);
 		searchBar.setResultLimit(resultLimit);
+		searchBar.setIconSize(iconSize);
 
 		// add toolbar buttons
 		// NB: Unfortunately, the gear (\u2699) does not appear on MacOS.

@@ -30,52 +30,58 @@
 package net.imagej.legacy.convert;
 
 import ij.ImagePlus;
-import ij.WindowManager;
 
+import java.util.Collection;
+
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.ImgPlus;
+
+import org.scijava.Priority;
 import org.scijava.convert.Converter;
+import org.scijava.object.ObjectService;
+import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 /**
- * Converts an image ID in {@code double} form to its corresponding
- * {@link ImagePlus} object.
+ * {@link Converter} implementation for converting {@link Dataset} to a
+ * {@link ImagePlus}.
  * <p>
- * ImageJ 1.x macros do not support object references. To reference an image,
- * you must either do so by title (a string) or by ID (a double). If a macro
- * declares an output of type {@link ImagePlus}, the macro must assign that
- * output with either a title or an ID. This converter exists so that ImageJ 1.x
- * macros that assign a double ID value to an {@link ImagePlus} output will be
- * properly converted when the actual output value is needed.
- * </p>
- * <p>
- * Note that unlike most other classes in the ImageJ Legacy project, this one
- * <em>needs</em> typed references to classes in the {@code ij} package,
- * particularly {@link ImagePlus}, so that the conversion logic works as
- * intended. It seems to work without side effects in the standard case...
+ * NB: should be LOWER priority than any default {@code Converter}s to avoid
+ * unintentionally grabbing undesired conversions (e.g. involving nulls).
  * </p>
  *
+ * @author Mark Hiner
  * @author Curtis Rueden
  */
-@Plugin(type = Converter.class)
-public class DoubleToImagePlusConverter extends
-	AbstractLegacyConverter<Double, ImagePlus>
+@Plugin(type = Converter.class, priority = Priority.LOW)
+public class ImgPlusToImagePlusConverter extends
+	AbstractLegacyConverter<ImgPlus, ImagePlus>
 {
+
+	@Parameter(required = false)
+	private DatasetService datasetService;
+
+	@Parameter(required = false)
+	private ObjectService objectService;
 
 	// -- Converter methods --
 
 	@Override
-	public boolean canConvert(final Object src, final Class<?> dest) {
-		return legacyEnabled() && convert(src, ImagePlus.class) != null;
-	}
-
-	@Override
 	public <T> T convert(final Object src, final Class<T> dest) {
 		if (!legacyEnabled()) throw new UnsupportedOperationException();
-		if (!(src instanceof Double)) return null;
-		final Double imageID = (Double) src;
-		final ImagePlus imp = WindowManager.getImage(imageID.intValue());
+		final ImgPlus d = (ImgPlus) src;
+		final Dataset ds = datasetService.create(d);
+		final Object imp = legacyService.getImageMap().registerDataset(ds);
 		@SuppressWarnings("unchecked")
 		final T typedImp = (T) imp;
 		return typedImp;
+	}
+
+	@Override
+	public void populateInputCandidates(final Collection<Object> objects) {
+		if (objectService == null) return;
+		objects.addAll(objectService.getObjects(ImgPlus.class));
 	}
 
 	@Override
@@ -84,7 +90,7 @@ public class DoubleToImagePlusConverter extends
 	}
 
 	@Override
-	public Class<Double> getInputType() {
-		return Double.class;
+	public Class<ImgPlus> getInputType() {
+		return ImgPlus.class;
 	}
 }

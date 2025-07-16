@@ -2,7 +2,7 @@
  * #%L
  * ImageJ2 software for multidimensional image processing and analysis.
  * %%
- * Copyright (C) 2009 - 2023 ImageJ2 developers.
+ * Copyright (C) 2009 - 2025 ImageJ2 developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -118,7 +118,7 @@ public class ImageJ2Options extends OptionsPlugin {
 	static {
 		URL url = null;
 		try {
-			url = new URL("https://github.com/imagej/imagej/blob/master/WELCOME.md#welcome-to-imagej2");
+			url = new URL("https://github.com/imagej/imagej2/blob/master/WELCOME.md#welcome-to-imagej2");
 		}
 		catch (final MalformedURLException e) {
 			e.printStackTrace();

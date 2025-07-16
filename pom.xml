@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>36.0.0</version>
+		<version>41.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>net.imagej</groupId>
 	<artifactId>imagej-legacy</artifactId>
-	<version>1.2.2-SNAPSHOT</version>
+	<version>2.0.2-SNAPSHOT</version>
 
 	<name>ImageJ Legacy Bridge</name>
 	<description>The legacy component enables backward compatibility with the original version of ImageJ (1.x). It contains the code necessary to translate between ImageJ and ImageJ2 images, so that ImageJ plugins can be executed faithfully.</description>
@@ -177,10 +177,6 @@
 		<license.copyrightOwners>ImageJ2 developers.</license.copyrightOwners>
 		<license.projectName>ImageJ2 software for multidimensional image processing and analysis.</license.projectName>
 		<license.excludes>**/script_templates/**,**/doc/**</license.excludes>
-
-		<!-- NB: Required for tests to pass on Windows CLI. -->
-		<!-- see https://github.com/imagej/imagej-legacy/issues/198 -->
-		<maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>

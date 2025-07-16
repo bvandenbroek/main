@@ -2,7 +2,7 @@
  * #%L
  * ImageJ2 software for multidimensional image processing and analysis.
  * %%
- * Copyright (C) 2009 - 2023 ImageJ2 developers.
+ * Copyright (C) 2009 - 2025 ImageJ2 developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -184,13 +184,8 @@ public class IJ1Helper extends AbstractContextual {
 			ij1.exitWhenQuitting(true);
 
 			// make sure that the Event Dispatch Thread's class loader is set
-			SwingUtilities.invokeLater(new Runnable() {
-
-				@Override
-				public void run() {
-					Thread.currentThread().setContextClassLoader(IJ.getClassLoader());
-				}
-			});
+			SwingUtilities.invokeLater(() ->
+				Thread.currentThread().setContextClassLoader(IJ.getClassLoader()));
 
 			final LegacyImageMap imageMap = legacyService.getImageMap();
 			for (int i = 1; i <= WindowManager.getImageCount(); i++) {
@@ -287,6 +282,10 @@ public class IJ1Helper extends AbstractContextual {
 	 */
 	public boolean isRMIEnabled() {
 		return Prefs.runSocketListener;
+	}
+
+	public double guiScale() {
+		return Prefs.getGuiScale();
 	}
 
 	private boolean batchMode;

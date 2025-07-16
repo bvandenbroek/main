@@ -2,7 +2,7 @@
  * #%L
  * ImageJ2 software for multidimensional image processing and analysis.
  * %%
- * Copyright (C) 2009 - 2023 ImageJ2 developers.
+ * Copyright (C) 2009 - 2025 ImageJ2 developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,28 +29,31 @@
 
 package net.imagej.legacy.convert.roi.point;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.PointRoi;
 
-import java.util.ArrayList;
+import java.util.*;
 import java.util.Iterator;
-import java.util.List;
 
-import net.imglib2.RealLocalizable;
-import net.imglib2.RealPoint;
+import net.imglib2.*;
+import net.imglib2.RandomAccess;
+import net.imglib2.img.Img;
+import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.roi.geom.real.DefaultWritableRealPointCollection;
 import net.imglib2.roi.geom.real.RealPointCollection;
 import net.imglib2.roi.geom.real.WritableRealPointCollection;
 
+import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.view.Views;
+import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests {@link PointRoiWrapper}

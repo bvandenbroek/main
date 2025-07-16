@@ -2,7 +2,7 @@
  * #%L
  * ImageJ2 software for multidimensional image processing and analysis.
  * %%
- * Copyright (C) 2009 - 2023 ImageJ2 developers.
+ * Copyright (C) 2009 - 2025 ImageJ2 developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -104,6 +104,17 @@ public class DefaultLegacyOpener implements LegacyOpener {
 	public Object open(String path, final int planeIndex,
 		final boolean displayResult)
 	{
+		// There are many ways this code can get hit and the return value is
+		// critical in ensuring the proper subsequent behavior is taken.
+		// In the cases of Open Recent, path will be non-null. HOWEVER, if we do
+		// not handle the opening here we MUST return null to ensure the original
+		// ImageJ picks it up appropriately.
+		// In cases of File > Open..., path will be null and we will display a file
+		// chooser. If we do not handle the opening here, we MUST return the path
+		// that was selected - otherwise a second file chooser will be displayed
+		// when falling back to the original ImageJ.
+		// See https://github.com/imagej/imagej-legacy/issues/314
+		String returnPath = null;
 		final Context c = IJ1Helper.getLegacyContext();
 
 		legacyService = getCached(legacyService, LegacyService.class, c);
@@ -120,71 +131,81 @@ public class DefaultLegacyOpener implements LegacyOpener {
 		final boolean newStyleIO =
 			optionsService.getOptions(ImageJ2Options.class).isSciJavaIO();
 
-		if (!newStyleIO) {
-			// Before giving up, let's give the IOService's *eager* IOPlugins
-			// a chance to handle it, before the original ImageJ kicks in.
-			// An eager plugin is an IOPlugin with attrs = { @Attr("eager") }.
-			// This concept is distinct from a high-priority I/O plugin,
-			// because it partitions the list of IOPlugins into two parts:
-			// those allowed to run here, before the original ImageJ logic,
-			// and those which are not allowed to do so (the default).
-			Object data = null;
-			try {
-				IOPlugin<?> io = getEagerHandler(path);
-
-				if (io == null) {
-					logService.debug("No appropriate eager format found: " + path);
-					return null; // Pass through to original ImageJ.
-				}
-				data = io.open(path);
-				if (data == null) {
-					logService.debug("Eager format '" + io.getClass().getName() + "' opened nothing.");
-					return null; // Pass through to original ImageJ.
-				}
-				return handleData(c, data, path, displayResult);
-			}
-			catch (final IOException exc) {
-				legacyService.handleException(exc);
-			}
-
-			// No eager plugin handled this path, so we give up.
-			return null; // Pass through to original ImageJ.
-		}
-
+		// Ensure path is not null.
 		if (path == null) {
+			// Display a file chooser dialog for the user to select a path.
+			// This dialog replaces the original ImageJ's file chooser, which
+			// normally happens later in the case of the File > Open code path.
 			final CommandInfo command = commandService.getCommand(GetPath.class);
 			final String[] selectedPath = new String[1];
 			final Future<Module> result =
 				moduleService.run(command, true, "path", selectedPath);
 			final Module module = moduleService.waitFor(result);
-			// Check if the module failed
-			if (module == null) return null;
-			// Check if the module was canceled
-			if (Cancelable.class.isAssignableFrom(module.getClass())) {
-				if (((Cancelable)module).isCanceled()) {
-					return Boolean.TRUE;
+			// Check if the module failed.
+			if (module == null) return null; // fall back to original ImageJ
+			// Check if the module was canceled.
+			if (module instanceof Cancelable && //
+				(((Cancelable) module).isCanceled()))
+			{
+				return Boolean.TRUE; // cancel the operation
+			}
+			path = selectedPath[0];
+			// Since we displayed an opener dialog to the user, here we do want to
+			// update the returnPath, to avoid triggering a second opener dialog
+			returnPath = path;
+		}
+		if (path == null) return Boolean.TRUE; // cancel the operation
+
+		// And now it's time to open the path to get the data!
+		final Object data;
+		try {
+			if (newStyleIO) {
+				// With ImageJ2-style I/O enabled, we ask the SciJava I/O
+				// service to open the data using any available I/O plugin.
+				final IOPlugin<?> opener = ioService.getOpener(path);
+				if (opener == null) {
+					logService.warn("No appropriate format found: " + path);
+					return returnPath;
+				}
+				data = opener.open(path);
+				if (data == null) {
+					logService.warn("Opening was canceled.");
+					return returnPath;
 				}
 			}
-
-			path = selectedPath[0];
-		}
-
-		Object data = null;
-		try {
-			final IOPlugin<?> opener = ioService.getOpener(path);
-			if (opener == null) {
-				logService.warn("No appropriate format found: " + path);
-				return path;
-			}
-			data = opener.open(path);
-			if (data == null) {
-				logService.warn("Opening was canceled.");
-				return path;
+			else {
+				// With ImageJ2-style I/O disabled, we let the original ImageJ
+				// operate on the file path the way it normally would... EXCEPT:
+				// before falling back, we give the IOService's *eager* IOPlugins
+				// a chance to handle it, before the original ImageJ kicks in.
+				// An eager plugin is an IOPlugin with attrs = { @Attr("eager") }.
+				// This concept is distinct from a high-priority I/O plugin,
+				// because it partitions the list of IOPlugins into two parts:
+				// those allowed to run here, before the original ImageJ logic,
+				// and those which are not allowed to do so (the default).
+				try {
+					final IOPlugin<?> io = getEagerHandler(path);
+					if (io == null) {
+						logService.debug("No appropriate eager I/O plugin found: " + path);
+						return returnPath; // fall back to original ImageJ
+					}
+					data = io.open(path);
+					if (data == null) {
+						logService.debug("Eager I/O plugin '" + io.getClass().getName() + "' opened nothing.");
+						return returnPath; // fall back to original ImageJ
+					}
+				}
+				catch (final IOException exc) {
+					legacyService.handleException(exc);
+					return returnPath; // fall back to original ImageJ
+				}
 			}
 		}
 		catch (final IOException exc) {
 			legacyService.handleException(exc);
+			return returnPath; // fall back to original ImageJ
 		}
+
 		return handleData(c, data, path, displayResult);
 	}
 

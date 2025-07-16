@@ -2,7 +2,7 @@
  * #%L
  * ImageJ2 software for multidimensional image processing and analysis.
  * %%
- * Copyright (C) 2009 - 2023 ImageJ2 developers.
+ * Copyright (C) 2009 - 2025 ImageJ2 developers.
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -378,7 +378,7 @@ public class DefaultRoiConversionTest {
 		assertTrue(c instanceof WrapperToRotatedRectRoiConverter);
 
 		final RotatedRectRoi crrr = convertService.convert(m, RotatedRectRoi.class);
-		assertEquals(Roi.FREEROI, crrr.getType());
+		assertEquals(Roi.POLYGON, crrr.getType());
 		assertTrue(rrr == crrr);
 	}
 }

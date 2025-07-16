@@ -27,58 +27,39 @@
  * #L%
  */
 
-package net.imagej.legacy.translate;
+package net.imagej.legacy.convert;
+
+import java.util.Collection;
+
+import org.scijava.convert.Converter;
 
 import ij.ImagePlus;
-
-import net.imagej.Dataset;
-import net.imagej.display.ImageDisplay;
-import net.imagej.legacy.LegacyService;
-
-import org.scijava.AbstractContextual;
-import org.scijava.Context;
+import net.imagej.legacy.IJ1Helper;
 
 /**
- * Combines {@link DisplayCreator} and {@link ImagePlusCreator}.
- *
- * @author Barry DeZonia
- * @author Curtis Rueden
+ * Base {@link Converter} class for converting {@link ImagePlus} to other
+ * classes.
  */
-public class ImageTranslator extends AbstractContextual
+public abstract class AbstractImagePlusLegacyConverter<O> extends
+	AbstractLegacyConverter<ImagePlus, O>
 {
 
-	private final DisplayCreator displayCreator;
-	private final ImagePlusCreator imagePlusCreator;
+	@Override
+	public void populateInputCandidates(final Collection<Object> objects) {
+		if (!legacyEnabled()) return;
 
-	public ImageTranslator(final LegacyService legacyService) {
-		final Context context = legacyService.getContext();
-		displayCreator = new DisplayCreator(context);
-		imagePlusCreator = new ImagePlusCreator(context);
-	}
+		final IJ1Helper ij1Helper = legacyService.getIJ1Helper();
 
-	/**
-	 * Creates a {@link ImageDisplay} from an {@link ImagePlus}. Shares planes of
-	 * data when possible.
-	 */
-	public ImageDisplay createDisplay(final ImagePlus imp) {
-		return displayCreator.createDisplay(imp);
-	}
+		final int[] imageIDs = ij1Helper.getIDList();
+		if (imageIDs == null) return; // no image IDs
 
-	/**
-	 * Creates an {@link ImagePlus} from a {@link ImageDisplay}. Shares planes of
-	 * data when possible.
-	 */
-	public ImagePlus createLegacyImage(final ImageDisplay display) {
-		return imagePlusCreator.createLegacyImage(display);
-	}
-
-	public ImagePlus createLegacyImage(final Dataset ds) {
-		return imagePlusCreator.createLegacyImage(ds);
-	}
-
-	public ImagePlus createLegacyImage(final Dataset ds,
-		final ImageDisplay display)
-	{
-		return imagePlusCreator.createLegacyImage(ds, display);
+		// Add any ImagePluses in the IJ1 WindowManager that are not already
+		// converted
+		for (final int id : imageIDs) {
+			final ImagePlus imgPlus = ij1Helper.getImage(id);
+			if (legacyService.getImageMap().lookupDisplay(imgPlus) == null) {
+				objects.add(imgPlus);
+			}
+		}
 	}
 }
